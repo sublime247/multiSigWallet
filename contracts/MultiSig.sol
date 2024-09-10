@@ -29,7 +29,7 @@ uint8 public trxId;
    bool isCompleted;
    address[] _signee;
   }
-   mapping(uint8=>QorumUpdate) qorumUpdate;
+   mapping(uint8=>QorumUpdate) public qorumUpdate;
    mapping (address=>bool) isValidSigners;
    mapping(address=>mapping(uint256=> bool)) hasSigned;
    mapping(address=>mapping(uint256=>bool)) hasSignedQorum;
@@ -38,17 +38,15 @@ uint8 public trxId;
 
 
   constructor(uint8 _qorum, address[] memory _signers){
-    if(_qorum<=0 || _qorum>signers.length){
-        revert NotAValidQorum();
-    }
-    qorum =_qorum;
+
     signers = _signers;
     for(uint8 i=0; i<_signers.length; i++){
 
         address validSigner = _signers[i];
         if(validSigner==address(0)){
            revert  ZeroAddressDetected();
-        }
+         }
+       require(!isValidSigners[validSigner], "Signer already exist");
         
 
         isValidSigners[_signers[i]]= true;
@@ -59,7 +57,10 @@ uint8 public trxId;
         isValidSigners[msg.sender] = true;
         noValidSigners += 1;
         }
-    
+        if(_qorum<=0 || _qorum>noValidSigners){
+        revert NotAValidQorum();
+    }
+    qorum =_qorum;
   }
    
    
@@ -87,6 +88,7 @@ function transfer(address _recipient, uint256 _amount, address _tokenAddress) ex
     _transaction.tokenAddress =_tokenAddress;
     _transaction.sender = msg.sender;
     _transaction.recipient=_recipient;
+    _transaction.id = _trxid;
     _transaction.transactionTime = block.timestamp;
     _transaction.numberOfApproval +=1;
     _transaction._signee.push(msg.sender);
@@ -123,9 +125,9 @@ function withdraw(uint256 _amount, address _tokenAddress) external {
     if(msg.sender==address(0)){
         revert ZeroAddressDetected();
     }
-if (_amount == 0 || _amount > IERC20(_tokenAddress).balanceOf(address(this))) {
-            revert InsufficientBalance();
-        }
+    if (_amount == 0 || _amount > IERC20(_tokenAddress).balanceOf(address(this))) {
+                revert InsufficientBalance();
+            }
     uint8 _trxid = trxId +1;
     Transaction storage _transaction = transactions[_trxid];
     _transaction.amount=_amount;
@@ -141,47 +143,47 @@ if (_amount == 0 || _amount > IERC20(_tokenAddress).balanceOf(address(this))) {
 }
 
 function updateQorum(uint8 newQorum) external {
-if(!isValidSigners[msg.sender]){
-   revert NotAValidSigner();
-}
-if(newQorum<=0 || newQorum>noValidSigners){
-    revert NotAValidQorum();
-}
-uint8 qId = qorumId+1;
-QorumUpdate storage _qorumUpdate = qorumUpdate[qId];
+    if(!isValidSigners[msg.sender]){
+    revert NotAValidSigner();
+    }
+    if(newQorum<=0 || newQorum>noValidSigners){
+        revert NotAValidQorum();
+    }
+    uint8 qId = qorumId+1;
+    QorumUpdate storage _qorumUpdate = qorumUpdate[qId];
 
-_qorumUpdate.proposedQorum = newQorum;
-_qorumUpdate.numberOfApproval +=1;
-_qorumUpdate._signee.push(msg.sender);
+    _qorumUpdate.proposedQorum = newQorum;
+    _qorumUpdate.numberOfApproval +=1;
+    _qorumUpdate._signee.push(msg.sender);
 
-hasSignedQorum[msg.sender][qId]= true;
+    hasSignedQorum[msg.sender][qId]= true;
 
 
-qorumId+=1;
-}
+    qorumId+=1;
+    }
 
 function approveQorumUpdate(uint8 _qorumId) external {
-   if (_qorumId == 0) {
-            revert InvalidTransaction();
+        if (_qorumId == 0) {
+                revert InvalidTransaction();
+                }
+        if(!isValidSigners[msg.sender]){
+        revert NotAValidSigner();
         }
-if(!isValidSigners[msg.sender]){
-   revert NotAValidSigner();
-}
 
-QorumUpdate storage _qorumUpdate = qorumUpdate[_qorumId];
-    if (_qorumUpdate.isCompleted) {
-        revert TransactionCompleted();
+        QorumUpdate storage _qorumUpdate = qorumUpdate[_qorumId];
+            if (_qorumUpdate.isCompleted) {
+                revert TransactionCompleted();
+                }
+        if(hasSignedQorum[msg.sender][_qorumId]){
+            revert CannotSignTransactionTwice();
         }
-if(hasSignedQorum[msg.sender][_qorumId]){
-    revert CannotSignTransactionTwice();
-}
-_qorumUpdate.numberOfApproval+=1;
-_qorumUpdate._signee.push(msg.sender);
-hasSignedQorum[msg.sender][_qorumId]= true;
-if(_qorumUpdate.numberOfApproval>=qorum){
-    _qorumUpdate.isCompleted=true;
-    qorum=_qorumUpdate.proposedQorum;
-}
-}
+        _qorumUpdate.numberOfApproval+=1;
+        _qorumUpdate._signee.push(msg.sender);
+        hasSignedQorum[msg.sender][_qorumId]= true;
+        if(_qorumUpdate.numberOfApproval>=qorum){
+            _qorumUpdate.isCompleted=true;
+            qorum=_qorumUpdate.proposedQorum;
+        }
+        }
 
 }
