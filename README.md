@@ -1,4 +1,4 @@
-### MultiSig Smart Contract
+## MultiSig Smart Contract
 This is a simple Solidity-based Multi-Signature Wallet (MultiSig) smart contract. It allows a set of predefined signers to approve and execute token transfers only when a quorum is met. Additionally, the contract allows for updating the quorum, with signer approvals required for the change to take effect.
 
 ## Features
