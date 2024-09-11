@@ -56,12 +56,25 @@ describe("MultiSig", function () {
 
   describe("Transfer",  function () {
 
+    it("Should check if address is not address zero", async function () {
+      
+      const { token, owner, multiSig, qorum, owner6, owner1 } = await loadFixture(deployMultiSig);
+      const amount = hre.ethers.parseUnits("100", 18);
+      await multiSig.connect(owner).transfer(owner6, amount, token);
+       
+      const trx = await multiSig.transactions(1);
+      expect(trx.sender).to.not.equal("0x00000000000000000000000")
+      expect(trx.recipient).to.equal(owner6.address);
+      expect(trx.id).to.equal(1);
+      expect(trx.sender).to.equal(owner.address)
+   
+    });
     it("Should check if transferFunction is created correctly", async function () {
       
       const { token, owner, multiSig, qorum, owner6, owner1 } = await loadFixture(deployMultiSig);
       const amount = hre.ethers.parseUnits("100", 18);
       await multiSig.connect(owner).transfer(owner6, amount, token);
-  
+       
       const trx = await multiSig.transactions(1);
       expect(trx.recipient).to.equal(owner6.address);
       expect(trx.id).to.equal(1);
@@ -91,7 +104,7 @@ describe("MultiSig", function () {
       expect(trx.numberOfApproval).to.equal(1);
       expect(trx.isCompleted).to.equal(false);
     });
-    
+
     it("Should allow other valid signers approve transaction", async function () {
       const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig);
       const amount = hre.ethers.parseUnits("50", 18);

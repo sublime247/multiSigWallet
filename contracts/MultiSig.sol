@@ -2,10 +2,11 @@
 pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
+// for ReentrancyGuard
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract MultiSig {
+
+contract MultiSig is ReentrancyGuard  {
 address[] public signers;
 uint8 public qorum;
 uint8 public noValidSigners;
@@ -98,7 +99,7 @@ function transfer(address _recipient, uint256 _amount, address _tokenAddress) ex
 
 }
 
-function approveTransaction(uint8 _trxId) external{
+function approveTransaction(uint8 _trxId) external nonReentrant{
     if(_trxId==0){
         revert InvalidTransaction();
     }
@@ -121,7 +122,7 @@ function approveTransaction(uint8 _trxId) external{
 
 
 
-function withdraw(uint256 _amount, address _tokenAddress) external {
+function withdraw(uint256 _amount, address _tokenAddress) external  {
     if(msg.sender==address(0)){
         revert ZeroAddressDetected();
     }
