@@ -12,6 +12,7 @@ uint8 public qorum;
 uint8 public noValidSigners;
 
 uint8 public trxId;
+enum TrxType{TokenTrx, QuorumTRx,UpdateSignerTrx }
 
   struct  Transaction{
     uint8 id;
@@ -23,22 +24,18 @@ uint8 public trxId;
     uint8 numberOfApproval;
     bool isCompleted;
     address[] _signee;
+    uint8 proposedQuorom;
+    address newSigner;
+    TrxType trxType;
   }
-  struct QorumUpdate{
-   uint8 proposedQorum;
-   uint8 numberOfApproval;
-   bool isCompleted;
-   address[] _signee;
-  }
-   mapping(uint8=>QorumUpdate) public qorumUpdate;
    mapping (address=>bool) isValidSigners;
    mapping(address=>mapping(uint256=> bool)) hasSigned;
    mapping(address=>mapping(uint256=>bool)) hasSignedQorum;
    mapping(uint8=>Transaction) public transactions;
-   uint8 public qorumId;
 
 
   constructor(uint8 _qorum, address[] memory _signers){
+    require(_qorum>1, "Quorum must be greater than 1");
 
       signers = _signers;
     for(uint8 i=0; i<_signers.length; i++){
@@ -74,6 +71,7 @@ uint8 public trxId;
    error NotAValidQorum();
 
 function transfer(address _recipient, uint256 _amount, address _tokenAddress) external {
+
     if(_recipient==address(0)){
    revert ZeroAddressDetected();
     }
@@ -85,6 +83,7 @@ function transfer(address _recipient, uint256 _amount, address _tokenAddress) ex
     }
     uint8 _trxid = trxId +1;
     Transaction storage _transaction = transactions[_trxid];
+    _transaction.trxType = TrxType.TokenTrx;
     _transaction.amount=_amount;
     _transaction.tokenAddress =_tokenAddress;
     _transaction.sender = msg.sender;
@@ -97,6 +96,9 @@ function transfer(address _recipient, uint256 _amount, address _tokenAddress) ex
 
     trxId +=1;
 
+
+
+
 }
 
 function approveTransaction(uint8 _trxId) external nonReentrant{
@@ -105,7 +107,6 @@ function approveTransaction(uint8 _trxId) external nonReentrant{
     }
 
     Transaction storage _transaction = transactions[_trxId];
-    require(IERC20(_transaction.tokenAddress).balanceOf(address(this))>=_transaction.amount, "Insufficient Funds");
     if(_transaction.isCompleted){
         revert TransactionCompleted();
     }
@@ -113,10 +114,16 @@ function approveTransaction(uint8 _trxId) external nonReentrant{
        revert CannotSignTransactionTwice(); 
     }
     _transaction.numberOfApproval +=1;
-    _transaction._signee.push(msg.sender);
-    if(_transaction.numberOfApproval==qorum){
-        _transaction.isCompleted =true;
+    if(_transaction.numberOfApproval>=qorum){
+        if(_transaction.trxType==TrxType.TokenTrx){ 
+      require(IERC20(_transaction.tokenAddress).balanceOf(address(this))>=_transaction.amount, "Insufficient Funds");
       IERC20(_transaction.tokenAddress).transfer(_transaction.recipient, _transaction.amount);
+        }if(_transaction.trxType==TrxType.QuorumTRx){
+            qorum=_transaction.proposedQuorom;
+        }if(_transaction.trxType==TrxType.UpdateSignerTrx){
+             noValidSigners+=1;
+        }
+       _transaction.isCompleted =true;
     }
 }
 
@@ -131,6 +138,7 @@ function withdraw(uint256 _amount, address _tokenAddress) external  {
             }
     uint8 _trxid = trxId +1;
     Transaction storage _transaction = transactions[_trxid];
+    _transaction.trxType = TrxType.TokenTrx;
     _transaction.amount=_amount;
     _transaction.tokenAddress =_tokenAddress;
     _transaction.sender = address(this);
@@ -150,41 +158,33 @@ function updateQorum(uint8 newQorum) external {
     if(newQorum<=0 || newQorum>noValidSigners){
         revert NotAValidQorum();
     }
-    uint8 qId = qorumId+1;
-    QorumUpdate storage _qorumUpdate = qorumUpdate[qId];
-
-    _qorumUpdate.proposedQorum = newQorum;
+    uint8 qId = trxId+1;
+    Transaction storage _qorumUpdate = transactions[qId];
+    _qorumUpdate.trxType = TrxType.QuorumTRx;   
+    _qorumUpdate.proposedQuorom = newQorum;
     _qorumUpdate.numberOfApproval +=1;
     _qorumUpdate._signee.push(msg.sender);
-
     hasSignedQorum[msg.sender][qId]= true;
 
 
-    qorumId+=1;
+    trxId+=1;
     }
 
-function approveQorumUpdate(uint8 _qorumId) external {
-        if (_qorumId == 0) {
-                revert InvalidTransaction();
-                }
-        if(!isValidSigners[msg.sender]){
-        revert NotAValidSigner();
-        }
 
-        QorumUpdate storage _qorumUpdate = qorumUpdate[_qorumId];
-            if (_qorumUpdate.isCompleted) {
-                revert TransactionCompleted();
-                }
-        if(hasSignedQorum[msg.sender][_qorumId]){
-            revert CannotSignTransactionTwice();
-        }
-        _qorumUpdate.numberOfApproval+=1;
-        _qorumUpdate._signee.push(msg.sender);
-        hasSignedQorum[msg.sender][_qorumId]= true;
-        if(_qorumUpdate.numberOfApproval>=qorum){
-            _qorumUpdate.isCompleted=true;
-            qorum=_qorumUpdate.proposedQorum;
-        }
-        }
+    function addSigners(address _newSigner) external{
+        isValidSigners[_newSigner]=true;
+          if(!isValidSigners[msg.sender]){
+            revert NotAValidSigner();
+    }
+     uint8 qId = trxId+1;
+    Transaction storage _signerUpdate = transactions[qId];
+    _signerUpdate.trxType = TrxType.UpdateSignerTrx;   
+    _signerUpdate.newSigner = _newSigner;
+    _signerUpdate.numberOfApproval +=1;
+    _signerUpdate._signee.push(msg.sender);
+    hasSignedQorum[msg.sender][qId]= true;
+    trxId+=1;
+    }   
+
 
 }

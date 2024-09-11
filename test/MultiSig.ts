@@ -8,21 +8,21 @@ import hre from "hardhat";
 
 describe("MultiSig", function () {
   async function deployToken() {
-    const [owner, owner6] = await hre.ethers.getSigners();
+    const [owner] = await hre.ethers.getSigners();
     const KSHToken = await hre.ethers.getContractFactory("MST");
     const token = await KSHToken.deploy();
     
-    return { token, owner, owner6 };
+    return { token, owner };
 }
   async function deployMultiSig() {
       
-    const [owner, owner6, owner2, owner1, owner3, owner4, owner5] = await hre.ethers.getSigners();
+    const [owner, owner6, owner2, owner1, owner3, owner4, owner5, owner7] = await hre.ethers.getSigners();
     const MultiSig = await hre.ethers.getContractFactory("MultiSig");
     const qorum = 4
     const multiSig = await MultiSig.deploy(qorum, [owner6, owner2, owner1, owner3, owner4, owner5]);
     const {token} = await loadFixture(deployToken);
     await token.transfer(multiSig, hre.ethers.parseUnits("100", 18));
-    return { owner, token, qorum, owner6, owner2, owner1, owner3, owner4, owner5, multiSig };  
+    return { owner, token, qorum, owner6, owner2, owner1, owner3, owner4, owner5, owner7, multiSig };  
   }
   describe("Deployment", function () {
     it("Should check if qorum is set correctly", async function () {
@@ -117,6 +117,17 @@ describe("MultiSig", function () {
       expect(trx.numberOfApproval).to.be.equal(4);
       expect(trx.isCompleted).to.be.equal(true);
     });
+    it("Should allow other valid signers approve quorom", async function () {
+      const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig);
+      await multiSig.connect(owner).updateQorum(4);
+      await multiSig.connect(owner1).approveTransaction(1);
+      await multiSig.connect(owner2).approveTransaction(1);
+      await multiSig.connect(owner3).approveTransaction(1);
+
+      const trx = await multiSig.transactions(1);
+      expect(trx.numberOfApproval).to.be.equal(4);
+      expect(trx.isCompleted).to.be.equal(true);
+    });
     });
   describe("WithdrawFunction", function () {
     it("it Should check if withdrawalFunction is created correctly", async function () {
@@ -135,34 +146,36 @@ describe("MultiSig", function () {
       const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig);
       const newQorum = 4;
       await multiSig.connect(owner).updateQorum(newQorum);
-      const nQ = await multiSig.qorumUpdate(1);
-      expect(nQ.proposedQorum).to.equal(newQorum);
+      const nQ = await multiSig.transactions(1);
+      expect(nQ.trxType).to.equal(1);
       expect(nQ.isCompleted).to.equal(false);
       expect(nQ.numberOfApproval).to.equal(1);
+      expect(nQ.proposedQuorom).to.equal(4);
+
     });
   });
-  
-  describe("ApproveQorumFunction", async function () {
-    it("Should prevent signers to approve qorum twice", async function () {
+
+  describe("AddSignerFunction", function () {
+    it("Should check if Signer is added correctly", async function () {
       const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig);
-      const newQorum = 4;
-      await multiSig.connect(owner).updateQorum(newQorum);
-     await expect( multiSig.connect(owner).approveQorumUpdate(1)).to.be.revertedWithCustomError(multiSig, "CannotSignTransactionTwice");
-      
+      await multiSig.connect(owner).addSigners(owner6);
+      const nQ = await multiSig.transactions(1);
+      expect(nQ.trxType).to.equal(2);
+      expect(nQ.isCompleted).to.equal(false);
+      expect(nQ.numberOfApproval).to.equal(1);
+      expect(nQ.newSigner).to.equal(owner6);
+
     });
-    it("Should allow other valid signers approve proposed qorum", async function () {
+    it("Should allow other valid signers approve newSigner", async function () {
       const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig);
-      // const newQorum = 4;
-      await multiSig.connect(owner).updateQorum(4);
-      await multiSig.connect(owner2).approveQorumUpdate(1)
-      await multiSig.connect(owner3).approveQorumUpdate(1)
-      await multiSig.connect(owner4).approveQorumUpdate(1)
+      await multiSig.connect(owner).addSigners(owner6);
+      await multiSig.connect(owner1).approveTransaction(1);
+      await multiSig.connect(owner2).approveTransaction(1);
+      await multiSig.connect(owner3).approveTransaction(1);
 
-
-      const nQ = await multiSig.qorumUpdate(1);
-      expect(nQ.numberOfApproval).to.equal(4)
-      expect(nQ.isCompleted).to.equal(true);
-
-    })
+      const trx = await multiSig.transactions(1);
+      expect(trx.numberOfApproval).to.be.equal(4);
+      expect(trx.isCompleted).to.be.equal(true);
+    });
   });
 });
