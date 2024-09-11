@@ -72,7 +72,7 @@ describe("MultiSig", function () {
     
   });
 
-  describe("ApproveTransaction",  function () {
+  describe("Approve Transaction",  function () {
     it("Should prevent signers to approve transaction twice", async function () {
       const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig);
       const amount = hre.ethers.parseUnits("50", 18);
