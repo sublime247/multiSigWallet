@@ -118,9 +118,9 @@ function approveTransaction(uint8 _trxId) external nonReentrant{
         if(_transaction.trxType==TrxType.TokenTrx){ 
       require(IERC20(_transaction.tokenAddress).balanceOf(address(this))>=_transaction.amount, "Insufficient Funds");
       IERC20(_transaction.tokenAddress).transfer(_transaction.recipient, _transaction.amount);
-        }if(_transaction.trxType==TrxType.QuorumTRx){
+        }else if(_transaction.trxType==TrxType.QuorumTRx){
             qorum=_transaction.proposedQuorom;
-        }if(_transaction.trxType==TrxType.UpdateSignerTrx){
+        }else if(_transaction.trxType==TrxType.UpdateSignerTrx){
              noValidSigners+=1;
         }
        _transaction.isCompleted =true;

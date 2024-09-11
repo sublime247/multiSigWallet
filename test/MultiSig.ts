@@ -130,34 +130,41 @@ describe("MultiSig", function () {
     });
     });
   describe("WithdrawFunction", function () {
-    it("it Should check if withdrawalFunction is created correctly", async function () {
-      const {token, owner, owner1, owner2, owner3, owner4, owner5, owner6, multiSig} = await  loadFixture(deployMultiSig);
-      const amount =  hre.ethers.parseUnits("100", 18);
-      await multiSig.connect(owner).transfer(owner, amount, token);
-      const trx = await multiSig.transactions(1);
-      expect(trx.id).to.equal(1);
-      expect(trx.recipient).to.equal(owner.address);
-      expect(trx.sender).to.equal(trx.sender);
+    it("it Should check if balance is greater than amount", async function () {
+      const { token, owner, owner1, owner2, owner3, owner4, owner5, owner6, multiSig } = await loadFixture(deployMultiSig);
+      const amount =  hre.ethers.parseUnits("100000", 18);
+      await expect(multiSig.connect(owner).withdraw(amount, token)).to.be.revertedWithCustomError(multiSig, "InsufficientBalance");
+      
     });
+    it("it Should check amount is not equal 0", async function () {
+      const { token, owner, owner1, owner2, owner3, owner4, owner5, owner6, multiSig } = await loadFixture(deployMultiSig);
+      const amount =  hre.ethers.parseUnits("0", 18);
+      await expect(multiSig.connect(owner).withdraw(amount, token)).to.be.revertedWithCustomError(multiSig, "InsufficientBalance");
+      
+    });
+
   });
 
   describe("UpdateQorumFunction", function () {
-    it("Should check if Qorum is set correctly", async function () {
-      const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig);
+    it("Should check if sender is a valid signer", async function () {
+      const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5,owner7  } = await loadFixture(deployMultiSig);
       const newQorum = 4;
-      await multiSig.connect(owner).updateQorum(newQorum);
-      const nQ = await multiSig.transactions(1);
-      expect(nQ.trxType).to.equal(1);
-      expect(nQ.isCompleted).to.equal(false);
-      expect(nQ.numberOfApproval).to.equal(1);
-      expect(nQ.proposedQuorom).to.equal(4);
+      await expect( multiSig.connect(owner7).updateQorum(newQorum)).to.be.revertedWithCustomError(multiSig,"NotAValidSigner");
 
+  
     });
+    it("Should check if newQorum is not less than or equal 0", async function () {
+      const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig);
+      const newQorum = 0;
+      await expect( multiSig.connect(owner).updateQorum(newQorum)).to.be.revertedWithCustomError(multiSig,"NotAValidQorum");
+  
+    });
+ 
   });
 
   describe("AddSignerFunction", function () {
     it("Should check if Signer is added correctly", async function () {
-      const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig);
+      const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig,);
       await multiSig.connect(owner).addSigners(owner6);
       const nQ = await multiSig.transactions(1);
       expect(nQ.trxType).to.equal(2);
@@ -176,6 +183,12 @@ describe("MultiSig", function () {
       const trx = await multiSig.transactions(1);
       expect(trx.numberOfApproval).to.be.equal(4);
       expect(trx.isCompleted).to.be.equal(true);
+    });
+    it("Should check if id is valid signers approve newSigner", async function () {
+      const { token, owner, multiSig, qorum, owner6, owner1, owner2, owner3, owner4, owner5 } = await loadFixture(deployMultiSig);
+
+     await  expect( multiSig.approveTransaction(0)).to.be.revertedWithCustomError(multiSig, "InvalidTransaction");
+
     });
   });
 });

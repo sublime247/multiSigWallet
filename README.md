@@ -21,4 +21,11 @@ This is a simple Solidity-based Multi-Signature Wallet (MultiSig) smart contract
     - NotAValidSigner: Thrown when a non-signer attempts to interact with the contract.
     - NotAValidQorum: Thrown when an invalid quorum is proposed or set.
 
+
+Below is a snapshot of the test cased passed for the smart contract.
+
+<!-- image -->
+![test](./images/test.png)
+
+
 ```
