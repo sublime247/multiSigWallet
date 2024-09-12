@@ -28,7 +28,7 @@ enum TrxType{TokenTrx, QuorumTRx,UpdateSignerTrx }
     address newSigner;
     TrxType trxType;
   }
-   mapping (address=>bool) isValidSigners;
+   mapping (address=>bool) public isValidSigners;
    mapping(address=>mapping(uint256=> bool)) hasSigned;
    mapping(address=>mapping(uint256=>bool)) hasSignedQorum;
    mapping(uint8=>Transaction) public transactions;
@@ -59,6 +59,7 @@ enum TrxType{TokenTrx, QuorumTRx,UpdateSignerTrx }
         revert NotAValidQorum();
     }
     qorum =_qorum;
+    trxId=1;
   }
    
    
@@ -81,18 +82,18 @@ function transfer(address _recipient, uint256 _amount, address _tokenAddress) ex
     if(_amount<=0 || _amount>IERC20(_tokenAddress).balanceOf(address(this))){
        revert InsufficientBalance();
     }
-    uint8 _trxid = trxId +1;
-    Transaction storage _transaction = transactions[_trxid];
+    // uint8 _trxid = trxId +1;
+    Transaction storage _transaction = transactions[trxId];
     _transaction.trxType = TrxType.TokenTrx;
     _transaction.amount=_amount;
     _transaction.tokenAddress =_tokenAddress;
     _transaction.sender = msg.sender;
     _transaction.recipient=_recipient;
-    _transaction.id = _trxid;
+    _transaction.id = trxId;
     _transaction.transactionTime = block.timestamp;
     _transaction.numberOfApproval +=1;
     _transaction._signee.push(msg.sender);
-    hasSigned[msg.sender][_trxid] =true;
+    hasSigned[msg.sender][trxId] =true;
 
     trxId +=1;
 
@@ -117,13 +118,15 @@ function approveTransaction(uint8 _trxId) external nonReentrant{
     if(_transaction.numberOfApproval>=qorum){
         if(_transaction.trxType==TrxType.TokenTrx){ 
       require(IERC20(_transaction.tokenAddress).balanceOf(address(this))>=_transaction.amount, "Insufficient Funds");
+
       IERC20(_transaction.tokenAddress).transfer(_transaction.recipient, _transaction.amount);
         }else if(_transaction.trxType==TrxType.QuorumTRx){
-            qorum=_transaction.proposedQuorom;
+            qorum =_transaction.proposedQuorom;
         }else if(_transaction.trxType==TrxType.UpdateSignerTrx){
              noValidSigners+=1;
         }
        _transaction.isCompleted =true;
+      
     }
 }
 
@@ -133,11 +136,14 @@ function withdraw(uint256 _amount, address _tokenAddress) external  {
     if(msg.sender==address(0)){
         revert ZeroAddressDetected();
     }
+        if(!isValidSigners[msg.sender]){
+        revert NotAValidSigner();
+    }
     if (_amount == 0 || _amount > IERC20(_tokenAddress).balanceOf(address(this))) {
                 revert InsufficientBalance();
             }
-    uint8 _trxid = trxId +1;
-    Transaction storage _transaction = transactions[_trxid];
+    // uint8 _trxid = trxId +1;
+    Transaction storage _transaction = transactions[trxId];
     _transaction.trxType = TrxType.TokenTrx;
     _transaction.amount=_amount;
     _transaction.tokenAddress =_tokenAddress;
@@ -146,7 +152,7 @@ function withdraw(uint256 _amount, address _tokenAddress) external  {
     _transaction.transactionTime = block.timestamp;
     _transaction.numberOfApproval +=1;
     _transaction._signee.push(msg.sender);
-    hasSigned[msg.sender][_trxid] =true;
+    hasSigned[msg.sender][trxId] =true;
 
     trxId +=1;
 }
@@ -155,7 +161,8 @@ function updateQorum(uint8 newQorum) external {
     if(!isValidSigners[msg.sender]){
     revert NotAValidSigner();
     }
-    if(newQorum<=0 || newQorum>noValidSigners){
+    
+    if(newQorum<=1 || newQorum>noValidSigners){
         revert NotAValidQorum();
     }
     uint8 qId = trxId+1;

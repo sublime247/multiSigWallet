@@ -4,10 +4,10 @@ import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 const MultiSigModule = buildModule("MultiSigModule", (m) => {
   const quorum = 4;
   const signers = [
-    "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4",
-    "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2",
-    "0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db",
-    "0x617F2E2fD72FD9D5503197092aC168c91465E7f2"
+   "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+   "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+    "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+    "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"
   ];
 
  

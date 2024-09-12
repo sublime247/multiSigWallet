@@ -9,9 +9,16 @@ const config: HardhatUserConfig = {
     // for testnet
     "lisk-sepolia": {
       url: process.env.LISK_RPC_URL!,
-      accounts: [process.env.ACCOUNT_PRIVATE_KEY!],
+      accounts: [
+        process.env.ACCOUNT_PRIVATE_KEY!,
+        process.env.ACCOUNT_PRIVATE_KEY1!,
+        process.env.ACCOUNT_PRIVATE_KEY2!,
+        process.env.ACCOUNT_PRIVATE_KEY3!,
+        process.env.ACCOUNT_PRIVATE_KEY4!],
       gasPrice: 100000000000,
+      
     },
+    
   },
   etherscan: {
     // Use "123" as a placeholder, because Blockscout doesn't need a real API key, and Hardhat will complain if this property isn't set.
